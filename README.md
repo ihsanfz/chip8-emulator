@@ -38,6 +38,7 @@ Chip-8 is a virtual machine from the 1970s designed to make programming video ga
 ## Dependencies
 
 - SDL2 library
+- ImGUI
 
 ### Installation
 
@@ -60,10 +61,16 @@ brew install sdl2
 
 1. Clone the repo
 ```bash
-git clone https://github.com/TatHack-Tathva/chip8-emulator.git
+git clone https://github.com/ihsanfz/chip8-emulator
 ```
 
-2. Make it
+2. Clone ImGui repo
+```bash
+cd chip8-emulator
+git clone https://github.com/ocornut/imgui.git
+```
+
+3. Make it
 ```bash
 make
 ```

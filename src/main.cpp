@@ -51,6 +51,7 @@ bool pause_menu = false;
 std::string popup_message = "";
 Uint32 popup_until = 0;
 std::string current_rom;
+bool resizable_window = false;
 
 void audio_callback(void* userdata, uint8_t* stream, int len){
     static uint32_t sample_index = 0;
@@ -79,14 +80,18 @@ void draw_graphics(SDL_Renderer* renderer, Chip8& chip8){
     		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     		break;
 	case 1:
-    		SDL_SetRenderDrawColor(renderer, 0, 40, 0, 255);
+    		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     		break;
     	case 2:
-    		SDL_SetRenderDrawColor(renderer, 0, 20, 40, 255);
+    		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     		break;
     	case 3:
-    		SDL_SetRenderDrawColor(renderer, 40, 20, 0, 255);
+    		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     		break;
+    	case 4:
+    		SDL_SetRenderDrawColor(renderer,18,9,26,255);
+    		break;
+    	
     }
     SDL_RenderClear(renderer);
     // Drawing white pixels
@@ -98,17 +103,34 @@ void draw_graphics(SDL_Renderer* renderer, Chip8& chip8){
     		SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
     		break;
     	case 2:
-    		SDL_SetRenderDrawColor(renderer, 0, 128, 255, 255);
-    		break;
-    	case 3:
     		SDL_SetRenderDrawColor(renderer, 255, 176, 0, 255);
     		break;
+    	case 3:
+    		SDL_SetRenderDrawColor(renderer, 0, 255, 255, 255);
+    		break;
+    	case 4:
+    		SDL_SetRenderDrawColor(renderer,214,107,255,255);
+    		break;
     }
+    
+    int window_width;
+    int window_height;
+    
+    SDL_GetRendererOutputSize(renderer, &window_width, &window_height);
+    
+    int pixel_width = SCALE;
+    int pixel_height = SCALE;
+    
+    if(resizable_window){
+    	pixel_width = window_width / 64;
+    	pixel_height = window_height / 32;
+    }
+    
     
     for(int y=0; y<32; y++){
         for(int x=0; x<64; x++){
             if(chip8.display[x + (y*64)] == 1){
-                SDL_Rect rect = {x*SCALE, y*SCALE, SCALE, SCALE};
+                SDL_Rect rect = {x*pixel_width, y*pixel_height, pixel_width, pixel_height};
                 SDL_RenderFillRect(renderer, &rect);
             }
         }
@@ -151,25 +173,25 @@ void handle_input(Chip8& chip8, bool& running){
         
         if(event.key.keysym.sym == SDLK_F2){
             color_filter = 0;
-            popup_message = "Color: White";
+            popup_message = "Color: Original";
             popup_until = SDL_GetTicks() + 1000;
         }
 
         if(event.key.keysym.sym == SDLK_F3){
             color_filter = 1;
-            popup_message = "Color: Green";
+            popup_message = "Color: Classic Green Screen";
             popup_until = SDL_GetTicks() + 1000;
         }
 
         if(event.key.keysym.sym == SDLK_F4){
             color_filter = 2;
-            popup_message = "Color: Blue";
+            popup_message = "Color: Amber CRT";
             popup_until = SDL_GetTicks() + 1000;
         }
 
         if(event.key.keysym.sym == SDLK_F5){
             color_filter = 3;
-            popup_message = "Color: Orange";
+            popup_message = "Color: Neon High-Contrast";
             popup_until = SDL_GetTicks() + 1000;
         }
         
@@ -329,8 +351,13 @@ int main(int argc, char** argv){
             ImGuiWindowFlags_AlwaysAutoResize |
             ImGuiWindowFlags_NoCollapse
         );
+        
+        ImGui::Text("Emulator Settings");
+        
+        ImGui::Separator();
 
         ImGui::Text("Emulation Speed: %d", emulation_speed);
+        
 
         if(ImGui::Button("-"))
             emulation_speed--;
@@ -339,31 +366,53 @@ int main(int argc, char** argv){
 
         if(ImGui::Button("+"))
             emulation_speed++;
-
-        ImGui::Separator();
-
-        ImGui::Text("Color");
 	
-	const char* items[] = {"White", "Green", "Blue", "Orange"};
-	if(ImGui::Combo("##", &color_filter, items, IM_ARRAYSIZE(items))){}
-        ImGui::Separator();
 
+	
+		if(ImGui::Checkbox("Resizable Window", &resizable_window)){
+        	if(resizable_window){
+        		SDL_SetWindowResizable(window, SDL_TRUE);
+        	} else {
+        		SDL_SetWindowResizable(window, SDL_FALSE);
+        		SDL_SetWindowSize(window, WIDTH, HEIGHT);
+        		}
+        }
+	
+        ImGui::Separator();
+        
+        ImGui::Text("Emulator State");
+        
+        ImGui::Separator();
+        
+        ImGui::Text("Save/Load Emulator State");
+        
         if(ImGui::Button("Save State"))
-            chip8.save_state("save.state");
+        	chip8.save_state("save.state");
 
         ImGui::SameLine();
 
         if(ImGui::Button("Load State"))
-            chip8.load_state("save.state");
-
-        ImGui::Separator();
+        	chip8.load_state("save.state");
         
-        if(ImGui::Button("Reset")){
+        ImGui::Text("Reset Emulation State");
+		if(ImGui::Button("Reset")){
         	chip8 = Chip8();
         	chip8.load_rom(current_rom);
         	pause_menu = false;
         }
+        
+        ImGui::Separator();
 
+        ImGui::Text("Color Settings");
+        
+        ImGui::Separator();
+        
+        ImGui::Text("Game Rendering Color");
+	
+	const char* items[] = {"Original", "Classic Green Screen", "Amber CRT", "Neon High-Contrast", "Purple Neon"};
+	if(ImGui::Combo("##", &color_filter, items, IM_ARRAYSIZE(items))){}
+        ImGui::Separator();
+   
         if(ImGui::Button("Back to ROM Browser"))
             screen = 0;
 
