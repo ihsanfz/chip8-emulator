@@ -72,6 +72,57 @@ void Chip8::load_rom(const std::string& filename){
     std::cout << "Loaded ROM: " << filename << std::endl;
 }
 
+void Chip8::save_state(const std::string& filename){
+    std::ofstream file(filename, std::ios::binary);
+
+    if(!file.is_open()){
+        std::cerr << "Failed to save state: " << filename << std::endl;
+        return;
+    }
+
+    file.write((char*)memory, sizeof(memory));
+    file.write((char*)v, sizeof(v));
+    file.write((char*)&index, sizeof(index));
+    file.write((char*)&pc, sizeof(pc));
+    file.write((char*)stack, sizeof(stack));
+    file.write((char*)&sp, sizeof(sp));
+    file.write((char*)&delay_timer, sizeof(delay_timer));
+    file.write((char*)&sound_timer, sizeof(sound_timer));
+    file.write((char*)display, sizeof(display));
+    file.write((char*)key, sizeof(key));
+    file.write((char*)&draw_flag, sizeof(draw_flag));
+
+    file.close();
+
+    std::cout << "State saved: " << filename << std::endl;
+}
+
+void Chip8::load_state(const std::string& filename){
+    std::ifstream file(filename, std::ios::binary);
+
+    if(!file.is_open()){
+        std::cerr << "Failed to load state: " << filename << std::endl;
+        return;
+    }
+
+    file.read((char*)memory, sizeof(memory));
+    file.read((char*)v, sizeof(v));
+    file.read((char*)&index, sizeof(index));
+    file.read((char*)&pc, sizeof(pc));
+    file.read((char*)stack, sizeof(stack));
+    file.read((char*)&sp, sizeof(sp));
+    file.read((char*)&delay_timer, sizeof(delay_timer));
+    file.read((char*)&sound_timer, sizeof(sound_timer));
+    file.read((char*)display, sizeof(display));
+    file.read((char*)key, sizeof(key));
+    file.read((char*)&draw_flag, sizeof(draw_flag));
+
+    file.close();
+
+    std::cout << "State loaded: " << filename << std::endl;
+}
+
+
 void Chip8::emulate_cycle(){
     opcode = memory[pc] << 8 | memory[pc+1]; // 16-bit instruction
 
@@ -84,8 +135,8 @@ void Chip8::emulate_cycle(){
                     pc += 2;
                     break;
                 case 0x00EE: // Returns from subroutine
-                    pc = stack[sp];
                     sp--;
+                    pc = stack[sp];
                     pc += 2;
                     break;
                 default:
@@ -148,7 +199,7 @@ void Chip8::emulate_cycle(){
                 }
                     break;
                 case 0x0005: // v[x] -= v[y], v[F] = NOT(borrow)
-                    v[0xF] = (v[(opcode & 0x0F00) >> 8] > v[(opcode & 0x00F0) >> 4]) ? 1 : 0;
+                    v[0xF] = (v[(opcode & 0x00F0) >> 4] > v[(opcode & 0x0F00) >> 8]) ? 0 : 1;
                     v[(opcode & 0x0F00) >> 8] -= v[(opcode & 0x00F0) >> 4];
                     pc += 2;
                     break;
@@ -158,7 +209,7 @@ void Chip8::emulate_cycle(){
                     pc += 2;
                     break;
                 case 0x0007: // v[x] = v[y] - v[x], v[F] = NOT(borrow)
-                    v[0xF] = (v[(opcode & 0x00F0) >> 4] > v[(opcode & 0x0F00) >> 8]) ? 1 : 0;
+                    v[0xF] = (v[(opcode & 0x0F00) >> 8] > v[(opcode & 0x00F0) >> 4]) ? 0 : 1;
                     v[(opcode & 0x0F00) >> 8] = v[(opcode & 0x00F0) >> 4] - v[(opcode & 0x0F00) >> 8];
                     pc += 2;
                     break;
@@ -252,7 +303,7 @@ void Chip8::emulate_cycle(){
                             break;
                         }
                     }
-                    pc += 2;
+                    if(key_pressed) pc += 2;
                 }
                     break;
                 case 0x0015: // FX15 - delay_timer = v[x]
@@ -280,15 +331,17 @@ void Chip8::emulate_cycle(){
                 }
                     break;
                 case 0x0055: // FX55 - store v[0] to v[x] in memory starting from index
-                    for(int i=0; i<((opcode & 0x0F00) >> 8); i++){
+                    for(int i=0; i<=((opcode & 0x0F00) >> 8); i++){
                         memory[index+i] = v[i];
                     }
+                    index += ((opcode & 0x0F00) >> 8) + 1;
                     pc += 2;
                     break;
                 case 0x0065: // FX65 - Fill v[0] to v[x] from memory starting at index
-                    for(int i=0; i<((opcode & 0x0F00) >> 8); i++){
+                    for(int i=0; i<=((opcode & 0x0F00) >> 8); i++){
                         v[i] = memory[index+i];
                     }
+                    index += ((opcode & 0x0F00) >> 8) + 1;
                     pc += 2;
                     break;
                 default:
